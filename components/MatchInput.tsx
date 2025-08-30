@@ -13,11 +13,28 @@ const MatchInput: React.FC<MatchInputProps> = ({ players, rounds, setRounds }) =
     const [roundNumber, setRoundNumber] = useState(nextRoundNumber);
     const initialMatchState = [{ pair: 1, whitePlayerId: null, blackPlayerId: null, whiteResult: '' as MatchResult, blackResult: '' as MatchResult }];
     const [matches, setMatches] = useState<Match[]>(initialMatchState);
+    const [isEditingExisting, setIsEditingExisting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        setRoundNumber(nextRoundNumber);
-    }, [rounds, nextRoundNumber]);
+        if (!isEditingExisting) {
+            setRoundNumber(nextRoundNumber);
+        }
+    }, [rounds, nextRoundNumber, isEditingExisting]);
+    
+    // Load existing round data when round number changes
+    useEffect(() => {
+        const existingRound = rounds.find(r => r.roundNumber === roundNumber);
+        if (existingRound) {
+            setMatches(existingRound.matches.length > 0 ? existingRound.matches : initialMatchState);
+            setIsEditingExisting(true);
+        } else {
+            if (isEditingExisting) {
+                setMatches(initialMatchState);
+            }
+            setIsEditingExisting(false);
+        }
+    }, [roundNumber, rounds]);
     
     const getAvailablePlayers = (currentMatchIndex: number, color: 'white' | 'black') => {
         const selectedInOtherMatches = new Set<string>();
@@ -94,9 +111,12 @@ const MatchInput: React.FC<MatchInputProps> = ({ players, rounds, setRounds }) =
 
         alert(`บันทึกผลรอบที่ ${roundNumber} เรียบร้อย!`);
         
-        const nextNum = Math.max(...rounds.map(r => r.roundNumber), 0, roundNumber) + 1;
-        setRoundNumber(nextNum);
-        setMatches(initialMatchState);
+        // Only move to next round if not editing existing round
+        if (!isEditingExisting) {
+            const nextNum = Math.max(...rounds.map(r => r.roundNumber), 0, roundNumber) + 1;
+            setRoundNumber(nextNum);
+            setMatches(initialMatchState);
+        }
     };
 
     const handleSaveToFile = () => {
@@ -172,20 +192,44 @@ const MatchInput: React.FC<MatchInputProps> = ({ players, rounds, setRounds }) =
     return (
         <div className="bg-white p-6 rounded-lg shadow-lg">
              <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <div className="flex items-center space-x-2">
-                    <label htmlFor="roundNumber" className="text-lg font-semibold text-gray-700">รอบที่:</label>
-                    <input
-                        type="number"
-                        id="roundNumber"
-                        value={roundNumber}
-                        onChange={(e) => setRoundNumber(parseInt(e.target.value, 10) || 1)}
-                        min="1"
-                        className="w-20 text-center text-lg font-bold p-2 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    />
+                <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                    <div className="flex items-center space-x-2">
+                        <label htmlFor="roundNumber" className="text-lg font-semibold text-gray-700">รอบที่:</label>
+                        <input
+                            type="number"
+                            id="roundNumber"
+                            value={roundNumber}
+                            onChange={(e) => setRoundNumber(parseInt(e.target.value, 10) || 1)}
+                            min="1"
+                            className="w-20 text-center text-lg font-bold p-2 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        />
+                    </div>
+                    {rounds.length > 0 && (
+                        <div className="flex items-center space-x-2">
+                            <label className="text-sm text-gray-600">เลือกรอบที่มีอยู่:</label>
+                            <select 
+                                value={roundNumber} 
+                                onChange={(e) => setRoundNumber(parseInt(e.target.value, 10) || 1)}
+                                className="text-sm p-1 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            >
+                                <option value={nextRoundNumber}>รอบใหม่ ({nextRoundNumber})</option>
+                                {rounds.sort((a, b) => a.roundNumber - b.roundNumber).map(round => (
+                                    <option key={round.roundNumber} value={round.roundNumber}>
+                                        รอบที่ {round.roundNumber} ({round.matches.length} คู่)
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                    {isEditingExisting && (
+                        <span className="text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                            กำลังแก้ไขรอบที่มีอยู่
+                        </span>
+                    )}
                 </div>
                  <button onClick={saveRound} className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
                     <SaveIcon className="h-5 w-5 mr-2"/>
-                    บันทึกผลรอบที่ {roundNumber}
+                    {isEditingExisting ? 'อัปเดต' : 'บันทึก'}ผลรอบที่ {roundNumber}
                 </button>
             </div>
             
