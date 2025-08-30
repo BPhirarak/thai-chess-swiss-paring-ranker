@@ -1,0 +1,5 @@
+{
+  "name": "Thai Chess Swiss Pairing Ranker",
+  "description": "A web application to manage a Thai chess tournament using the Swiss pairing system. It allows for entering competitors, recording match results, and calculating and displaying rankings with tie-breakers like Buchholz and Sonneborn-Berger.",
+  "requestFramePermissions": []
+}
