@@ -1,14 +1,18 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Player, Round, Ranking, BuchholzMethod } from '../types';
+import { Player, Round, Ranking, BuchholzMethod, TournamentData } from '../types';
 import { calculateRankings } from '../services/rankingService';
 import { ChartBarIcon, DocumentArrowDownIcon, PrinterIcon } from './icons';
 
 interface RankingTableProps {
-    players: Player[];
-    rounds: Round[];
+    tournamentData: TournamentData;
 }
 
-const RankingTable: React.FC<RankingTableProps> = ({ players, rounds }) => {
+const RankingTable: React.FC<RankingTableProps> = ({ tournamentData }) => {
+    const currentTournament = tournamentData.tournaments.find(t => t.id === tournamentData.currentTournamentId);
+    const currentDivision = currentTournament?.divisions.find(d => d.id === tournamentData.currentDivisionId);
+    const players = currentDivision?.players || [];
+    const rounds = currentDivision?.rounds || [];
+    
     const [rankings, setRankings] = useState<Ranking[]>([]);
     const [lastRound, setLastRound] = useState<number>(0);
     const [buchholzMethod, setBuchholzMethod] = useState<BuchholzMethod>('cut-1');
@@ -67,7 +71,7 @@ const RankingTable: React.FC<RankingTableProps> = ({ players, rounds }) => {
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         link.setAttribute('href', url);
-        link.setAttribute('download', `ranking_round_${lastRound}.csv`);
+        link.setAttribute('download', `${currentTournament?.name || 'tournament'}_${currentDivision?.name || 'division'}_ranking_round_${lastRound}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -82,21 +86,42 @@ const RankingTable: React.FC<RankingTableProps> = ({ players, rounds }) => {
         window.print();
     };
 
+    if (!currentTournament || !currentDivision) {
+        return <div className="text-center p-8 bg-white rounded-lg shadow-lg">
+            <h3 className="text-xl font-semibold text-gray-700">กรุณาเลือกการแข่งขันและรุ่นก่อน</h3>
+            <p className="text-gray-500 mt-2">ไปที่เมนู 'ป้อนรายชื่อผู้แข่งขัน' เพื่อเลือกการแข่งขันและรุ่น</p>
+        </div>
+    }
+
     if (players.length === 0 || rounds.length === 0) {
          return <div className="text-center p-8 bg-white rounded-lg shadow-lg">
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-blue-900 font-semibold">{currentTournament.name} - {currentDivision.name}</p>
+            </div>
             <h3 className="text-xl font-semibold text-gray-700">ข้อมูลไม่เพียงพอสำหรับสร้างตารางอันดับ</h3>
-            <p className="text-gray-500 mt-2">กรุณาเพิ่มผู้แข่งขันและผลการแข่งขันอย่างน้อย 1 รอบ</p>
+            <p className="text-gray-500 mt-2">{players.length === 0 ? 'กรุณาเพิ่มผู้แข่งขันในรุ่นนี้' : 'กรุณาบันทึกผลการแข่งขันอย่างน้อย 1 รอบ'}</p>
         </div>
     }
 
     return (
         <div className="bg-white p-6 rounded-lg shadow-lg printable-area">
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg print:bg-white">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-lg font-semibold text-blue-900 print:text-gray-900">{currentTournament.name}</h3>
+                        <p className="text-blue-700 print:text-gray-700">รุ่น: {currentDivision.name}</p>
+                    </div>
+                    <div className="text-sm text-blue-600 print:text-gray-600">
+                        รอบที่มีอยู่: {rounds.length} รอบ
+                    </div>
+                </div>
+            </div>
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 print:hidden">
                 <div className="w-full sm:w-auto">
                      {rankings.length > 0 ? (
-                        <h2 className="text-2xl font-bold text-gray-800">Ranking after round {lastRound}</h2>
+                        <h2 className="text-2xl font-bold text-gray-800">{currentDivision.name} - Ranking after round {lastRound}</h2>
                     ) : (
-                         <h2 className="text-2xl font-bold text-gray-800">พร้อมสำหรับคำนวณอันดับ</h2>
+                         <h2 className="text-2xl font-bold text-gray-800">{currentDivision.name} - พร้อมสำหรับคำนวณอันดับ</h2>
                     )}
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">

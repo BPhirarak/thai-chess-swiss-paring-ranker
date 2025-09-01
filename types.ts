@@ -20,6 +20,29 @@ export interface Round {
   matches: Match[];
 }
 
+export interface Division {
+  id: string;
+  name: string;
+  players: Player[];
+  rounds: Round[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Tournament {
+  id: string;
+  name: string;
+  divisions: Division[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TournamentData {
+  tournaments: Tournament[];
+  currentTournamentId: string | null;
+  currentDivisionId: string | null;
+}
+
 export interface Ranking {
   position: number;
   playerId: string;
@@ -35,4 +58,4 @@ export interface Ranking {
 
 export type View = 'players' | 'matches' | 'ranking';
 
-export type BuchholzMethod = 'cut-1' | 'full';
+export type BuchholzMethod = 'cut-1' | 'full';}

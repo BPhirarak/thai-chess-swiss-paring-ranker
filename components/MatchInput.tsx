@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Player, Round, Match, MatchResult } from '../types';
+import { Player, Round, Match, MatchResult, TournamentData } from '../types';
 import { PlusIcon, SaveIcon, TrashIcon, DocumentArrowDownIcon, DocumentArrowUpIcon } from './icons';
 
 interface MatchInputProps {
-    players: Player[];
-    rounds: Round[];
-    setRounds: React.Dispatch<React.SetStateAction<Round[]>>;
+    tournamentData: TournamentData;
+    setTournamentData: React.Dispatch<React.SetStateAction<TournamentData>>;
 }
 
-const MatchInput: React.FC<MatchInputProps> = ({ players, rounds, setRounds }) => {
+const MatchInput: React.FC<MatchInputProps> = ({ tournamentData, setTournamentData }) => {
+    const currentTournament = tournamentData.tournaments.find(t => t.id === tournamentData.currentTournamentId);
+    const currentDivision = currentTournament?.divisions.find(d => d.id === tournamentData.currentDivisionId);
+    const players = currentDivision?.players || [];
+    const rounds = currentDivision?.rounds || [];
+    
     const nextRoundNumber = rounds.length > 0 ? Math.max(...rounds.map(r => r.roundNumber)) + 1 : 1;
     const [roundNumber, setRoundNumber] = useState(nextRoundNumber);
     const initialMatchState = [{ pair: 1, whitePlayerId: null, blackPlayerId: null, whiteResult: '' as MatchResult, blackResult: '' as MatchResult }];
@@ -84,6 +88,11 @@ const MatchInput: React.FC<MatchInputProps> = ({ players, rounds, setRounds }) =
     };
 
     const saveRound = () => {
+        if (!currentDivision) {
+            alert('กรุณาเลือกการแข่งขันและรุ่นก่อน');
+            return;
+        }
+
         const validMatches = matches.filter(m => 
             (m.whitePlayerId && m.whiteResult === 'bye') ||
             (m.whitePlayerId && m.blackPlayerId && m.whiteResult !== '' && m.blackResult !== '')
@@ -95,19 +104,25 @@ const MatchInput: React.FC<MatchInputProps> = ({ players, rounds, setRounds }) =
         }
 
         const newRound: Round = { roundNumber, matches: validMatches };
+        const updatedData = { ...tournamentData };
+        const tournamentIndex = updatedData.tournaments.findIndex(t => t.id === tournamentData.currentTournamentId);
+        const divisionIndex = updatedData.tournaments[tournamentIndex].divisions.findIndex(d => d.id === tournamentData.currentDivisionId);
         
-        const existingRoundIndex = rounds.findIndex(r => r.roundNumber === roundNumber);
+        const existingRoundIndex = updatedData.tournaments[tournamentIndex].divisions[divisionIndex].rounds.findIndex(r => r.roundNumber === roundNumber);
         if (existingRoundIndex > -1) {
             if(window.confirm(`มีข้อมูลของรอบที่ ${roundNumber} อยู่แล้ว ต้องการบันทึกทับหรือไม่?`)){
-                const updatedRounds = [...rounds];
-                updatedRounds[existingRoundIndex] = newRound;
-                setRounds(updatedRounds);
+                updatedData.tournaments[tournamentIndex].divisions[divisionIndex].rounds[existingRoundIndex] = newRound;
             } else {
                 return;
             }
         } else {
-            setRounds([...rounds, newRound].sort((a,b) => a.roundNumber - b.roundNumber));
+            updatedData.tournaments[tournamentIndex].divisions[divisionIndex].rounds.push(newRound);
+            updatedData.tournaments[tournamentIndex].divisions[divisionIndex].rounds.sort((a,b) => a.roundNumber - b.roundNumber);
         }
+
+        updatedData.tournaments[tournamentIndex].divisions[divisionIndex].updatedAt = new Date().toISOString();
+        updatedData.tournaments[tournamentIndex].updatedAt = new Date().toISOString();
+        setTournamentData(updatedData);
 
         alert(`บันทึกผลรอบที่ ${roundNumber} เรียบร้อย!`);
         
@@ -182,15 +197,36 @@ const MatchInput: React.FC<MatchInputProps> = ({ players, rounds, setRounds }) =
         }
     };
     
+    if (!currentTournament || !currentDivision) {
+        return <div className="text-center p-8 bg-white rounded-lg shadow-lg">
+            <h3 className="text-xl font-semibold text-gray-700">กรุณาเลือกการแข่งขันและรุ่นก่อน</h3>
+            <p className="text-gray-500 mt-2">คุณต้องสร้างหรือเลือกการแข่งขันและรุ่นก่อนบันทึกผล</p>
+        </div>
+    }
+
     if (players.length === 0) {
         return <div className="text-center p-8 bg-white rounded-lg shadow-lg">
-            <h3 className="text-xl font-semibold text-gray-700">กรุณาเพิ่มผู้แข่งขันก่อน</h3>
-            <p className="text-gray-500 mt-2">คุณต้องเพิ่มรายชื่อผู้เข้าแข่งขันในเมนู 'ป้อนรายชื่อผู้แข่งขัน' ก่อนบันทึกผล</p>
+            <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-blue-900 font-semibold">{currentTournament.name} - {currentDivision.name}</p>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-700">กรุณาเพิ่มผู้แข่งขันในรุ่นนี้ก่อน</h3>
+            <p className="text-gray-500 mt-2">ไปที่เมนู 'ป้อนรายชื่อผู้แข่งขัน' เพื่อเพิ่มผู้แข่งขัน</p>
         </div>
     }
 
     return (
         <div className="bg-white p-6 rounded-lg shadow-lg">
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-lg font-semibold text-blue-900">{currentTournament.name}</h3>
+                        <p className="text-blue-700">รุ่น: {currentDivision.name}</p>
+                    </div>
+                    <div className="text-sm text-blue-600">
+                        รอบที่มีอยู่: {rounds.length} รอบ
+                    </div>
+                </div>
+            </div>
              <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                 <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
                     <div className="flex items-center space-x-2">

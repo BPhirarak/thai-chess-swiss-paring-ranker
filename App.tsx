@@ -3,39 +3,70 @@ import Header from './components/Header';
 import PlayerInput from './components/PlayerInput';
 import MatchInput from './components/MatchInput';
 import RankingTable from './components/RankingTable';
-import { Player, Round, View } from './types';
+import { TournamentData, View } from './types';
 import { TrophyIcon, UserGroupIcon, ClipboardDocumentListIcon } from './components/icons';
 
 const App: React.FC = () => {
     const [view, setView] = useState<View>('players');
-    const [players, setPlayers] = useState<Player[]>([]);
-    const [rounds, setRounds] = useState<Round[]>([]);
+    const [tournamentData, setTournamentData] = useState<TournamentData>({
+        tournaments: [],
+        currentTournamentId: null,
+        currentDivisionId: null
+    });
 
     const renderView = () => {
         switch (view) {
             case 'players':
-                return <PlayerInput players={players} setPlayers={setPlayers} />;
+                return <PlayerInput tournamentData={tournamentData} setTournamentData={setTournamentData} />;
             case 'matches':
-                return <MatchInput players={players} rounds={rounds} setRounds={setRounds} />;
+                return <MatchInput tournamentData={tournamentData} setTournamentData={setTournamentData} />;
             case 'ranking':
-                return <RankingTable players={players} rounds={rounds} />;
+                return <RankingTable tournamentData={tournamentData} />;
             default:
-                return <PlayerInput players={players} setPlayers={setPlayers} />;
+                return <PlayerInput tournamentData={tournamentData} setTournamentData={setTournamentData} />;
         }
     };
     
+    const currentTournament = tournamentData.tournaments.find(t => t.id === tournamentData.currentTournamentId);
+    const currentDivision = currentTournament?.divisions.find(d => d.id === tournamentData.currentDivisionId);
+
     const getHeading = () => {
+        const baseTitle = currentTournament && currentDivision ? 
+            `${currentTournament.name} - ${currentDivision.name}` : 
+            'จัดการการแข่งขันหมากรุกไทย';
+        
         switch (view) {
             case 'players':
-                return { title: 'ป้อนรายชื่อผู้แข่งขัน', description: 'เพิ่มและจัดการรายชื่อผู้เข้าแข่งขันทั้งหมดที่นี่', icon: <UserGroupIcon className="h-8 w-8 text-white" /> };
+                return { 
+                    title: 'ป้อนรายชื่อผู้แข่งขัน', 
+                    subtitle: baseTitle,
+                    description: currentTournament && currentDivision ? 
+                        `จัดการผู้แข่งขันในรุ่น ${currentDivision.name}` : 
+                        'สร้างและจัดการการแข่งขันและรุ่นการแข่งขัน', 
+                    icon: <UserGroupIcon className="h-8 w-8 text-white" /> 
+                };
             case 'matches':
-                return { title: 'ป้อนผลการแข่งขัน', description: 'บันทึกผลการแข่งขันในแต่ละรอบ', icon: <ClipboardDocumentListIcon className="h-8 w-8 text-white" /> };
+                return { 
+                    title: 'บันทึกผลการแข่งขัน', 
+                    subtitle: baseTitle,
+                    description: currentTournament && currentDivision ? 
+                        `บันทึกผลการแข่งขันในรุ่น ${currentDivision.name}` : 
+                        'เลือกการแข่งขันและรุ่นการแข่งขันก่อน', 
+                    icon: <ClipboardDocumentListIcon className="h-8 w-8 text-white" /> 
+                };
             case 'ranking':
-                return { title: 'คำนวณคะแนนและทำตารางอันดับ', description: 'ประมวลผลและดูอันดับคะแนนล่าสุด', icon: <TrophyIcon className="h-8 w-8 text-white" /> };
+                return { 
+                    title: 'ตารางอันดับและคะแนน', 
+                    subtitle: baseTitle,
+                    description: currentTournament && currentDivision ? 
+                        `ดูอันดับและคะแนนของรุ่น ${currentDivision.name}` : 
+                        'เลือกการแข่งขันและรุ่นการแข่งขันเพื่อดูอันดับ', 
+                    icon: <TrophyIcon className="h-8 w-8 text-white" /> 
+                };
         }
     };
     
-    const { title, description, icon } = getHeading();
+    const { title, subtitle, description, icon } = getHeading();
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -47,6 +78,7 @@ const App: React.FC = () => {
                         </div>
                         <div>
                             <h1 className="text-3xl font-bold text-white">{title}</h1>
+                            {subtitle && <h2 className="text-xl font-medium text-indigo-100 mb-1">{subtitle}</h2>}
                             <p className="text-indigo-200">{description}</p>
                         </div>
                     </div>
